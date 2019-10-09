@@ -167,7 +167,7 @@ class World(object):
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
         # Get a random blueprint.
-        blueprint = random.choice(self.world.get_blueprint_library().filter(self._actor_filter))
+        blueprint = self.world.get_blueprint_library().find('vehicle.ford.mustang')
         blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
             color = random.choice(blueprint.get_attribute('color').recommended_values)
@@ -187,7 +187,7 @@ class World(object):
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         while self.player is None:
             spawn_points = self.map.get_spawn_points()
-            spawn_point = carla.Transform(carla.Location(265, 129.5, 2), carla.Rotation(yaw=180))
+            spawn_point = carla.Transform(carla.Location(2, 120, 2), carla.Rotation(yaw=-90))
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
@@ -198,6 +198,11 @@ class World(object):
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+
+        settings = self.world.get_settings()
+        settings.fixed_delta_seconds = 0.1
+        self.world.apply_settings(settings)
+        self.world.set_weather(carla.WeatherParameters.ClearNoon)
 
     def next_weather(self, reverse=False):
         self._weather_index += -1 if reverse else 1
@@ -676,14 +681,14 @@ class CameraManager(object):
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         Attachment = carla.AttachmentType
         self._camera_transforms = [
-            (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
+            #(carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
             (carla.Transform(carla.Location(x=1.6, z=1.7)), Attachment.Rigid),
             (carla.Transform(carla.Location(x=5.5, y=1.5, z=1.5)), Attachment.SpringArm),
             (carla.Transform(carla.Location(x=-8.0, z=6.0), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
             (carla.Transform(carla.Location(x=-1, y=-bound_y, z=0.5)), Attachment.Rigid)]
         self.transform_index = 1
         self.sensors = [
-           ['sensor.camera.rgb', cc.Raw, 'Camera RGB'],
+           #['sensor.camera.rgb', cc.Raw, 'Camera RGB'],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)'],
             ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)'],
             ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)'],
@@ -793,6 +798,7 @@ def game_loop(args):
 
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
+
         controller = KeyboardControl(world, args.autopilot)
 
         clock = pygame.time.Clock()
