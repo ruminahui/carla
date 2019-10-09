@@ -336,6 +336,13 @@ namespace detail {
     return _pimpl->CallAndWait<uint64_t>("tick_cue");
   }
 
+
+
+  /**************************** EXTRA FUNCTIONALITIES ADDED ****************************/
+  float Client::GetVehicleForwardSpeed(const rpc::ActorId &vehicle) const {
+    return _pimpl->CallAndWait<float>("get_forward_speed", vehicle);
+  }
+
 } // namespace detail
 } // namespace client
 } // namespace carla

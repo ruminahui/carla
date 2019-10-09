@@ -564,6 +564,27 @@ void FCarlaServer::FPimpl::BindActions()
     return R<void>::Success();
   };
 
+
+  /******************** EXTRA FUNCTIONALITIES ADDED ***********************/
+  BIND_SYNC(get_forward_speed) << [this](
+      cr::ActorId ActorId) -> R<float>
+  {
+    REQUIRE_CARLA_EPISODE();
+    auto ActorView = Episode->FindActor(ActorId);
+    if (!ActorView.IsValid())
+    {
+      RESPOND_ERROR("unable to apply actor physics control: actor not found");
+    }
+    auto Vehicle = Cast<ACarlaWheeledVehicle>(ActorView.GetActor());
+    if (Vehicle == nullptr)
+    {
+      RESPOND_ERROR("unable to apply actor physics control: actor is not a vehicle");
+    }
+
+    return Vehicle->GetVehicleForwardSpeed();
+  };
+
+
   // ~~ Apply control ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   BIND_SYNC(apply_control_to_vehicle) << [this](

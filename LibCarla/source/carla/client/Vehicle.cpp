@@ -68,5 +68,11 @@ namespace client {
     return boost::static_pointer_cast<TrafficLight>(GetWorld().GetActor(id));
   }
 
+
+  /***************** EXTRA FUNCTIONALITIES ADDED **********************/
+  float Vehicle::GetForwardSpeed(){
+    return GetEpisode().Lock()->GetVehicleForwardSpeed(*this);
+  }
+
 } // namespace client
 } // namespace carla

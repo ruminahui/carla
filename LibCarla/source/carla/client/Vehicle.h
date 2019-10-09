@@ -68,6 +68,10 @@ namespace client {
     /// Retrieve the traffic light actor currently affecting this vehicle.
     SharedPtr<TrafficLight> GetTrafficLight() const;
 
+
+    /********************* EXTRA FUNCTIONALITIES ADDED ************************/
+    float GetForwardSpeed();
+
   private:
 
     const bool _is_control_sticky;

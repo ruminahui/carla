@@ -229,18 +229,6 @@ public:
   UFUNCTION(BlueprintCallable)
   float GetWhiteTint() const;
 
-  UFUNCTION(BlueprintCallable)
-  void SetChromAberrIntensity(float Intensity);
-
-  UFUNCTION(BlueprintCallable)
-  float GetChromAberrIntensity() const;
-
-  UFUNCTION(BlueprintCallable)
-  void SetChromAberrOffset(float Offset);
-
-  UFUNCTION(BlueprintCallable)
-  float GetChromAberrOffset() const;
-
   /// Use for debugging purposes only.
   UFUNCTION(BlueprintCallable)
   bool ReadPixels(TArray<FColor> &BitMap) const

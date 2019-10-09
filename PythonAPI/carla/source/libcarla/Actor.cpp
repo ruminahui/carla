@@ -101,6 +101,7 @@ void export_actor() {
       .def("get_traffic_light_state", &cc::Vehicle::GetTrafficLightState)
       .def("is_at_traffic_light", &cc::Vehicle::IsAtTrafficLight)
       .def("get_traffic_light", &cc::Vehicle::GetTrafficLight)
+      .def("get_forward_speed", &cc::Vehicle::GetForwardSpeed)
       .def(self_ns::str(self_ns::self))
   ;
 

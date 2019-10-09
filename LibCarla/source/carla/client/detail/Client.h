@@ -209,6 +209,10 @@ namespace detail {
 
     uint64_t SendTickCue();
 
+
+    /************************ EXTRA FUNCTIONALITIES ADDED **********************/
+    float GetVehicleForwardSpeed(const rpc::ActorId &vehicle) const;
+
   private:
 
     class Pimpl;

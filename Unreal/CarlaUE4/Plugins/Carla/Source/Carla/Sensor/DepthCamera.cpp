@@ -17,9 +17,7 @@ FActorDefinition ADepthCamera::GetSensorDefinition()
 ADepthCamera::ADepthCamera(const FObjectInitializer &ObjectInitializer)
   : Super(ObjectInitializer)
 {
-  AddPostProcessingMaterial(
-      TEXT("Material'/Carla/PostProcessingMaterials/PhysicLensDistortion.PhysicLensDistortion'"));
-  AddPostProcessingMaterial(
+  LoadPostProcessingMaterial(
 #if PLATFORM_LINUX
       TEXT("Material'/Carla/PostProcessingMaterials/DepthEffectMaterial_GLSL.DepthEffectMaterial_GLSL'")
 #else

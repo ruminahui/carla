@@ -323,6 +323,11 @@ namespace detail {
     void ApplyPhysicsControlToVehicle(Vehicle &vehicle, const rpc::VehiclePhysicsControl &physicsControl) {
       _client.ApplyPhysicsControlToVehicle(vehicle.GetId(), physicsControl);
     }
+
+    /*************** EXTRA FUNCTIONALITIES ADDED ******************************/
+    float GetVehicleForwardSpeed(Vehicle &vehicle){
+      return _client.GetVehicleForwardSpeed(vehicle.GetId());
+    }
     /// @}
     // =========================================================================
     /// @name Operations with the recorder
