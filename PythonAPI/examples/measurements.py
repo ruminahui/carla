@@ -20,6 +20,8 @@ class Measurements():
 	""" Class to patch the measurements structure on the newest version of carla (0.9.6) """
 	def __init__(self):
 		self.player_measurements = PlayerMeasurements()
+		# Do not pack any information about other agents for now
+		self.non_player_agents = []
 
 
 

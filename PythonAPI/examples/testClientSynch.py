@@ -24,7 +24,8 @@ import random
 
 import image_converter
 from carla import ColorConverter as cc
-from learning_agents.imitation.imitation_agent import ImitationAgent
+#from learning_agents.imitation.imitation_agent import ImitationAgent
+from CAL_agent.CAL_controller import CAL
 from measurements import Measurements
 
 try:
@@ -137,13 +138,15 @@ def pack_data(image, player, agent):
     # print out the timestatmp of the image
     meas =  Measurements()
     meas.player_measurements.forward_speed = player.get_forward_speed() * 0.01 
+    meas.player_measurements.transform = player.get_transform()
+    meas.player_measurements.acceleration = player.get_acceleration()
     sensor_data = {}
     # Do some processing of the image dat
     # Store processed data to pass to agent
     sensor_data['CameraRGB'] = image_converter.to_rgb_array(image)
 
     # Process next control step from the agent and execute it
-    control = agent.run_step(meas, sensor_data, TURN_RIGHT, None)
+    control = agent.run_step(meas, sensor_data, LANE_FOLLOW, None)
 
     player.apply_control(control)
 
@@ -259,7 +262,9 @@ def main():
 
         if(vehicle == None):
             raise NoActorError("No actor found")
-        agent = ImitationAgent('Town01', True, vehicle)
+
+        #agent = ImitationAgent('Town01', True, vehicle)
+        agent = CAL('Town01', vehicle)
         actor_list.append(vehicle)
 
 
@@ -267,9 +272,15 @@ def main():
         camera_bp = bp_lib.find('sensor.camera.rgb')
         camera_bp.set_attribute('image_size_x', '800')
         camera_bp.set_attribute('image_size_y', '600')
-        camera_bp.set_attribute('fov', '100')
-        camera_rgb = world.spawn_actor(camera_bp, carla.Transform(carla.Location(x=2, z=1.4), carla.Rotation(pitch=-15)), attach_to=vehicle)
+        camera_bp.set_attribute('fov', '90')
+        camera_rgb = world.spawn_actor(camera_bp, carla.Transform(carla.Location(x=1.44, z=1.2), carla.Rotation(pitch=0)), attach_to=vehicle)
         actor_list.append(camera_rgb)
+
+        # Spawn a pedestrian in front of the car
+        # ped_bp = random.choice(bp_lib.filter('pedestrian'))
+        # ped_tf = carla.Transform(carla.Location(2, 100, 2), carla.Rotation())
+        # ped_actor = world.spawn_actor(ped_bp, ped_tf)
+        # actor_list.append(ped_actor)
 
         # Create a synchronous mode context.
         with CarlaSyncMode(world, camera_rgb, fps=10) as sync_mode:
