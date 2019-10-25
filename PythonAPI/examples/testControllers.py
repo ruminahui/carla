@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019 Computer Vision Center (CVC) at the Universitat Autonoma de
-# Barcelona (UAB).
-#
-# This work is licensed under the terms of the MIT license.
-# For a copy, see <https://opensource.org/licenses/MIT>.
-
+""" A simple script to test the performance of a selected controller on a vehicle for Carla0.9.6 """
 import glob
 import os
 import sys
@@ -23,7 +18,8 @@ import carla
 import random
 
 import image_converter
-from carla import ColorConverter as cc
+
+# Controllers for the vehicle
 #from learning_agents.imitation.imitation_agent import ImitationAgent
 from CAL_agent.CAL_controller import CAL
 from measurements import Measurements
@@ -44,7 +40,7 @@ except ImportError:
     import Queue as queue
 
 
-
+# High level direction commands for agents' run step input
 REACH_GOAL = 0.0
 GO_STRAIGHT = 5.0
 TURN_RIGHT = 4.0
@@ -67,7 +63,7 @@ class CarlaSyncMode(object):
         self.world = world
         self.sensors = sensors
         self.frame = None
-        self.delta_seconds = 1.0 / 10
+        self.delta_seconds = 1.0 / 20
         self._queues = []
         self._settings = None
 
@@ -77,6 +73,7 @@ class CarlaSyncMode(object):
             no_rendering_mode=False,
             synchronous_mode=True,
             fixed_delta_seconds=self.delta_seconds))
+        self.world.set_weather(carla.WeatherParameters.ClearNoon)
 
         def make_queue(register_event):
             q = queue.Queue()
@@ -133,16 +130,14 @@ def should_quit():
     return False
 
 
-def pack_data(image, player, agent):
+def apply_agent_control(image, player, agent):
     """ Function to pack up the data into the necessary format for the agent to process """
     # print out the timestatmp of the image
     meas =  Measurements()
-    meas.player_measurements.forward_speed = player.get_forward_speed() * 0.01 
-    meas.player_measurements.transform = player.get_transform()
-    meas.player_measurements.acceleration = player.get_acceleration()
-    sensor_data = {}
+    meas.update_measurements(image, player)
     # Do some processing of the image dat
     # Store processed data to pass to agent
+    sensor_data = {}
     sensor_data['CameraRGB'] = image_converter.to_rgb_array(image)
 
     # Process next control step from the agent and execute it
@@ -151,139 +146,67 @@ def pack_data(image, player, agent):
     player.apply_control(control)
 
 
-def world_setup(client, world, bp_library):
-    """ Initializes the appropiate setting for the Carla experiment"""
-
-    # @todo cannot import these directly.
-    SpawnActor = carla.command.SpawnActor
-    SetAutopilot = carla.command.SetAutopilot
-    FutureActor = carla.command.FutureActor
-
-    # Set the weather parameter of the scene
-    settings = world.get_settings()
-    settings.fixed_delta_seconds = 0.1
-    world.apply_settings(settings)
-    world.set_weather(carla.WeatherParameters.ClearNoon)
-
-
-    blueprintsWalkers = bp_library.filter("walker.pedestrian.*")
-
-
-    # Add a large number of pedestrians into the scene as a batch command
-    walkers_list = []
-    all_id = []
-
-
-
-# -------------
-    # Spawn Walkers
-    # -------------
-    # 1. take all the random locations to spawn
-    spawn_points = []
-    for i in range(100):
-        spawn_point = carla.Transform()
-        loc = world.get_random_location_from_navigation()
-        if (loc != None):
-            spawn_point.location = loc
-            spawn_points.append(spawn_point)
-    # 2. we spawn the walker object
-    batch = []
-    for spawn_point in spawn_points:
-        walker_bp = random.choice(blueprintsWalkers)
-        # set as not invencible
-        if walker_bp.has_attribute('is_invincible'):
-            walker_bp.set_attribute('is_invincible', 'false')
-        batch.append(SpawnActor(walker_bp, spawn_point))
-    results = client.apply_batch_sync(batch, True)
-    for i in range(len(results)):
-        if results[i].error:
-            print("error")
-        else:
-            walkers_list.append({"id": results[i].actor_id})
-    # 3. we spawn the walker controller
-    batch = []
-    walker_controller_bp = world.get_blueprint_library().find('controller.ai.walker')
-    for i in range(len(walkers_list)):
-        batch.append(SpawnActor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
-    results = client.apply_batch_sync(batch, True)
-    for i in range(len(results)):
-        if results[i].error:
-            logging.error(results[i].error)
-        else:
-            walkers_list[i]["con"] = results[i].actor_id
-    # 4. we put altogether the walkers and controllers id to get the objects from their id
-    for i in range(len(walkers_list)):
-        all_id.append(walkers_list[i]["con"])
-        all_id.append(walkers_list[i]["id"])
-    all_actors = world.get_actors(all_id)
-
-    # wait for a tick to ensure client receives the last transform of the walkers we have just created
-    world.wait_for_tick()
-
-    # 5. initialize each controller and set target to walk to (list is [controler, actor, controller, actor ...])
-    for i in range(0, len(all_id), 2):
-        # start walker
-        all_actors[i].start()
-        # set walk to random point
-        all_actors[i].go_to_location(world.get_random_location_from_navigation())
-        # random max speed
-        all_actors[i].set_max_speed(1 + random.random()/2)    # max speed between 1 and 1.5 (default is 1.4 m/s)
-
-
 
 def main():
     actor_list = []
-    pygame.init()
+    # Init client connection
+    client = carla.Client('localhost', 2000)
+    client.set_timeout(2.0)
+    client.load_world('Town01')
+    world = client.get_world()
 
-    display = pygame.display.set_mode(
-        (800, 600),
-        pygame.HWSURFACE | pygame.DOUBLEBUF)
+
+
+    # Set up PYGAME window for easier visualization
+    pygame.init()
+    display = pygame.display.set_mode((800, 600),pygame.HWSURFACE | pygame.DOUBLEBUF)
     font = get_font()
     clock = pygame.time.Clock()
 
-    client = carla.Client('localhost', 2000)
-    client.set_timeout(2.0)
-
-    world = client.get_world()
 
     try:
-        bp_lib = world.get_blueprint_library()
-
         # Load the approapite settings for the experiment
-        world_setup(client, world, bp_lib)
-
-
-        # Find the test vehicle's actor 
-        vehicle = None
-        for actor in world.get_actors():
-            if("vehicle" in actor.type_id):
-                vehicle = actor
-                break
-
-        if(vehicle == None):
-            raise NoActorError("No actor found")
-
-        #agent = ImitationAgent('Town01', True, vehicle)
-        agent = CAL('Town01', vehicle)
+        bp_lib = world.get_blueprint_library()
+        
+        # Spawn the agent's vehicle into the scene
+        vehicle_bp = bp_lib.find('vehicle.ford.mustang')
+        vehicle_tf = carla.Transform(carla.Location(2, 120, 2), carla.Rotation(yaw=-90))
+        vehicle = world.spawn_actor(vehicle_bp, vehicle_tf)
         actor_list.append(vehicle)
+        # Advance to the next simulation step in the simulator to ensure car is spawned
+        world.tick()
 
+        
 
         # Create RGB camera
         camera_bp = bp_lib.find('sensor.camera.rgb')
         camera_bp.set_attribute('image_size_x', '800')
         camera_bp.set_attribute('image_size_y', '600')
+        # Config for CAL
         camera_bp.set_attribute('fov', '90')
         camera_rgb = world.spawn_actor(camera_bp, carla.Transform(carla.Location(x=1.44, z=1.2), carla.Rotation(pitch=0)), attach_to=vehicle)
+
+        # Config for IML
+        # camera_bp.set_attribute('fov', '100')
+        # camera_rgb = world.spawn_actor(camera_bp, carla.Transform(carla.Location(x=2, z=1.4), carla.Rotation(pitch=-15)), attach_to=vehicle)
         actor_list.append(camera_rgb)
 
-        # Spawn a pedestrian in front of the car
-        # ped_bp = random.choice(bp_lib.filter('pedestrian'))
-        # ped_tf = carla.Transform(carla.Location(2, 100, 2), carla.Rotation())
-        # ped_actor = world.spawn_actor(ped_bp, ped_tf)
-        # actor_list.append(ped_actor)
+
+        # Finally, attach a controller to the vehicle
+        #agent = ImitationAgent('Town01', True, vehicle)
+        agent = CAL('Town01', vehicle)
+
+        #Spawn a pedestrian in front of the car 
+        ped_bp = random.choice(bp_lib.filter('pedestrian'))
+        ped_tf = carla.Transform(carla.Location(2, 80, 2), carla.Rotation())
+        ped_actor = world.spawn_actor(ped_bp, ped_tf)
+        actor_list.append(ped_actor)
+        world.tick() # Advance on step to ensure 
+        world.wait_for_tick(seconds = 2.0) # Wait up to two seconds for step update
+
 
         # Create a synchronous mode context.
-        with CarlaSyncMode(world, camera_rgb, fps=10) as sync_mode:
+        with CarlaSyncMode(world, camera_rgb, fps=20) as sync_mode:
             while True:
                 if should_quit():
                     return
@@ -292,7 +215,7 @@ def main():
                 # Advance the simulation and wait for the data.
                 snapshot, image_rgb = sync_mode.tick(timeout=2.0)
 
-                pack_data(image_rgb, vehicle, agent)
+                apply_agent_control(image_rgb, vehicle, agent)
 
                 fps = round(1.0 / snapshot.timestamp.delta_seconds)
 

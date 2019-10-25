@@ -187,8 +187,9 @@ class World(object):
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         while self.player is None:
             spawn_points = self.map.get_spawn_points()
-            spawn_point = carla.Transform(carla.Location(-4.7, 125, 2), carla.Rotation())
+            spawn_point = carla.Transform(carla.Location(0, 100, 2), carla.Rotation())
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+            self.player.set_simulate_physics(False)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
@@ -334,7 +335,7 @@ class KeyboardControl(object):
             world.player.apply_control(self._control)
 
     def _parse_vehicle_keys(self, keys, milliseconds):
-        self._control.throttle = 1.0 if keys[K_UP] or keys[K_w] else 0.0
+        self._control.throttle = 2.0 if keys[K_UP] or keys[K_w] else 0.0
         steer_increment = 5e-4 * milliseconds
         if keys[K_LEFT] or keys[K_a]:
             if self._steer_cache > 0:

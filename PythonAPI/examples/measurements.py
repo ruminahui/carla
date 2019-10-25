@@ -25,6 +25,14 @@ class Measurements():
 
 
 
+	def update_measurements(self, image, player):
+		""" Populates the information represented by this class by retrieving information from the image and the player """
+		self.player_measurements.forward_speed = player.get_forward_speed() * 0.01 
+		self.player_measurements.transform = player.get_transform()
+		self.player_measurements.acceleration = player.get_acceleration()
+
+
+
 
 
 
